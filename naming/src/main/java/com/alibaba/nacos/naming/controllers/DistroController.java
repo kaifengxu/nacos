@@ -15,9 +15,9 @@
  */
 package com.alibaba.nacos.naming.controllers;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.alibaba.nacos.core.utils.WebUtils;
-import com.alibaba.nacos.naming.cluster.ServerMode;
 import com.alibaba.nacos.naming.cluster.transport.Serializer;
 import com.alibaba.nacos.naming.consistency.Datum;
 import com.alibaba.nacos.naming.consistency.KeyBuilder;
@@ -38,6 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -72,7 +74,7 @@ public class DistroController {
         String entity = IOUtils.toString(request.getInputStream(), "UTF-8");
 
         if (StringUtils.isBlank(entity)) {
-            Loggers.EPHEMERAL.error("[onSync] receive empty entity!");
+            Loggers.DISTRO.error("[onSync] receive empty entity!");
             throw new NacosException(NacosException.INVALID_PARAM, "receive empty entity!");
         }
 
@@ -84,8 +86,8 @@ public class DistroController {
                 String namespaceId = KeyBuilder.getNamespace(entry.getKey());
                 String serviceName = KeyBuilder.getServiceName(entry.getKey());
                 if (!serviceManager.containService(namespaceId, serviceName)
-                    && ServerMode.AP.name().equals(switchDomain.getServerMode())) {
-                    serviceManager.createEmptyService(namespaceId, serviceName);
+                    && switchDomain.isDefaultInstanceEphemeral()) {
+                    serviceManager.createEmptyService(namespaceId, serviceName, true);
                 }
                 consistencyService.onPut(entry.getKey(), entry.getValue().value);
             }
@@ -106,17 +108,19 @@ public class DistroController {
 
     @RequestMapping(value = "/datum", method = RequestMethod.GET)
     public void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        String keys = WebUtils.required(request, "keys");
+
+        String entity = IOUtils.toString(request.getInputStream(), "UTF-8");
+        String keys = JSON.parseObject(entity).getString("keys");
         String keySplitter = ",";
         Map<String, Datum> datumMap = new HashMap<>(64);
         for (String key : keys.split(keySplitter)) {
             datumMap.put(key, consistencyService.get(key));
         }
-        response.getWriter().write(new String(serializer.serialize(datumMap), "UTF-8"));
+        response.getWriter().write(new String(serializer.serialize(datumMap), StandardCharsets.UTF_8));
     }
 
     @RequestMapping(value = "/datums", method = RequestMethod.GET)
     public void getAllDatums(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        response.getWriter().write(new String(serializer.serialize(dataStore.getDataMap()), "UTF-8"));
+        response.getWriter().write(new String(serializer.serialize(dataStore.getDataMap()), StandardCharsets.UTF_8));
     }
 }

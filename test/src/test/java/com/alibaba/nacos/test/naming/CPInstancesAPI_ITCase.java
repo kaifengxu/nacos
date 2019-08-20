@@ -20,14 +20,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import javax.swing.text.View;
-
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.nacos.api.PropertyKeyConst;
 import com.alibaba.nacos.api.common.Constants;
-import com.alibaba.nacos.api.naming.CommonParams;
 import com.alibaba.nacos.api.naming.NamingFactory;
 import com.alibaba.nacos.api.naming.NamingService;
 import com.alibaba.nacos.api.naming.pojo.Instance;
@@ -51,8 +47,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 import static com.alibaba.nacos.test.naming.NamingBase.*;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author nkorange
@@ -79,8 +73,6 @@ public class CPInstancesAPI_ITCase {
     public void setUp() throws Exception {
         String url = String.format("http://localhost:%d/", port);
         this.base = new URL(url);
-        NamingBase.prepareServer(port, "UP", "CP");
-        TimeUnit.SECONDS.sleep(5L);
 
         naming = NamingFactory.createNamingService("127.0.0.1" + ":" + port);
 
@@ -105,7 +97,7 @@ public class CPInstancesAPI_ITCase {
      * @TestStep :
      * @ExpectResult :
      */
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void registerInstance_ephemeral_true() throws Exception {
         String serviceName = NamingBase.randomDomainName();
         namingServiceCreate(serviceName, TEST_NAMESPACE_1, TEST_GROUP_1);
@@ -116,6 +108,9 @@ public class CPInstancesAPI_ITCase {
         instance.setIp("11.11.11.11");
         instance.setPort(80);
         naming1.registerInstance(serviceName, TEST_GROUP_1, instance);
+        TimeUnit.SECONDS.sleep(3L);
+        naming1.deregisterInstance(serviceName, TEST_GROUP_1, instance);
+        namingServiceDelete(serviceName, TEST_NAMESPACE_1, TEST_GROUP_1);
     }
 
     /**
@@ -154,7 +149,8 @@ public class CPInstancesAPI_ITCase {
         instance.setIp("11.11.11.11");
         instance.setPort(80);
         naming1.registerInstance(serviceName, TEST_GROUP_1, instance);
-        naming1.deregisterInstance(serviceName, TEST_GROUP_1, "11.11.11.11", 80, "c1");
+        naming1.deregisterInstance(serviceName, TEST_GROUP_1, instance);
+        TimeUnit.SECONDS.sleep(3L);
 
         namingServiceDelete(serviceName, TEST_NAMESPACE_1, TEST_GROUP_1);
     }

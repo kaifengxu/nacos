@@ -17,10 +17,7 @@ package com.alibaba.nacos.naming.consistency.ephemeral.distro;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.nacos.naming.cluster.servers.Server;
-import com.alibaba.nacos.naming.misc.GlobalConfig;
-import com.alibaba.nacos.naming.misc.GlobalExecutor;
-import com.alibaba.nacos.naming.misc.Loggers;
-import com.alibaba.nacos.naming.misc.NetUtils;
+import com.alibaba.nacos.naming.misc.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -49,21 +46,19 @@ public class TaskDispatcher {
 
     private List<TaskScheduler> taskSchedulerList = new ArrayList<>();
 
+    private final int cpuCoreCount = Runtime.getRuntime().availableProcessors();
+
     @PostConstruct
     public void init() {
-        for (int i = 0; i < partitionConfig.getTaskDispatchThreadCount(); i++) {
+        for (int i = 0; i < cpuCoreCount; i++) {
             TaskScheduler taskScheduler = new TaskScheduler(i);
             taskSchedulerList.add(taskScheduler);
             GlobalExecutor.submitTaskDispatch(taskScheduler);
         }
     }
 
-    public int mapTask(String key) {
-        return Math.abs(key.hashCode()) % partitionConfig.getTaskDispatchThreadCount();
-    }
-
     public void addTask(String key) {
-        taskSchedulerList.get(mapTask(key)).addTask(key);
+        taskSchedulerList.get(UtilsAndCommons.shakeUp(key, cpuCoreCount)).addTask(key);
     }
 
     public class TaskScheduler implements Runnable {
@@ -99,11 +94,15 @@ public class TaskDispatcher {
                     String key = queue.poll(partitionConfig.getTaskDispatchPeriod(),
                         TimeUnit.MILLISECONDS);
 
-                    if (Loggers.EPHEMERAL.isDebugEnabled() && StringUtils.isNotBlank(key)) {
-                        Loggers.EPHEMERAL.debug("got key: {}", key);
+                    if (Loggers.DISTRO.isDebugEnabled() && StringUtils.isNotBlank(key)) {
+                        Loggers.DISTRO.debug("got key: {}", key);
                     }
 
                     if (dataSyncer.getServers() == null || dataSyncer.getServers().isEmpty()) {
+                        continue;
+                    }
+
+                    if (StringUtils.isBlank(key)) {
                         continue;
                     }
 
@@ -111,10 +110,8 @@ public class TaskDispatcher {
                         keys = new ArrayList<>();
                     }
 
-                    if (StringUtils.isNotBlank(key)) {
-                        keys.add(key);
-                        dataSize++;
-                    }
+                    keys.add(key);
+                    dataSize++;
 
                     if (dataSize == partitionConfig.getBatchSyncKeyCount() ||
                         (System.currentTimeMillis() - lastDispatchTime) > partitionConfig.getTaskDispatchPeriod()) {
@@ -127,8 +124,8 @@ public class TaskDispatcher {
                             syncTask.setKeys(keys);
                             syncTask.setTargetServer(member.getKey());
 
-                            if (Loggers.EPHEMERAL.isDebugEnabled() && StringUtils.isNotBlank(key)) {
-                                Loggers.EPHEMERAL.debug("add sync task: {}", JSON.toJSONString(syncTask));
+                            if (Loggers.DISTRO.isDebugEnabled() && StringUtils.isNotBlank(key)) {
+                                Loggers.DISTRO.debug("add sync task: {}", JSON.toJSONString(syncTask));
                             }
 
                             dataSyncer.submit(syncTask, 0);
@@ -138,7 +135,7 @@ public class TaskDispatcher {
                     }
 
                 } catch (Exception e) {
-                    Loggers.EPHEMERAL.error("dispatch sync task failed.", e);
+                    Loggers.DISTRO.error("dispatch sync task failed.", e);
                 }
             }
         }

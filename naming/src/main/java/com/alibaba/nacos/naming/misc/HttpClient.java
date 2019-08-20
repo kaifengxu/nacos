@@ -19,7 +19,6 @@ import com.alibaba.nacos.common.util.HttpMethod;
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
-import com.ning.http.client.FluentStringsMap;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
@@ -27,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
@@ -34,13 +34,13 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.*;
@@ -51,14 +51,12 @@ import java.util.zip.GZIPInputStream;
  * @author nacos
  */
 public class HttpClient {
-    public static final int TIME_OUT_MILLIS = 10000;
-    public static final int CON_TIME_OUT_MILLIS = 5000;
+    private static final int TIME_OUT_MILLIS = 10000;
+    private static final int CON_TIME_OUT_MILLIS = 5000;
 
     private static AsyncHttpClient asyncHttpClient;
 
     private static CloseableHttpClient postClient;
-
-    private static PoolingHttpClientConnectionManager connectionManager;
 
     static {
         AsyncHttpClientConfig.Builder builder = new AsyncHttpClientConfig.Builder();
@@ -81,7 +79,6 @@ public class HttpClient {
         builder2.setMaxConnPerRoute(-1);
         builder2.setMaxConnTotal(-1);
         builder2.disableAutomaticRetries();
-//        builder2.disableConnectionState()
 
         postClient = builder2.build();
     }
@@ -285,6 +282,29 @@ public class HttpClient {
         }
     }
 
+    public static void asyncHttpGetLarge(String url, Map<String, String> headers, byte[] content, AsyncCompletionHandler handler) throws Exception {
+        AsyncHttpClient.BoundRequestBuilder builder = asyncHttpClient.prepareGet(url);
+
+        if (!headers.isEmpty()) {
+            for (String headerKey : headers.keySet()) {
+                builder.setHeader(headerKey, headers.get(headerKey));
+            }
+        }
+
+        builder.setBody(content);
+
+        builder.setHeader("Content-Type", "application/json; charset=UTF-8");
+        builder.setHeader("Accept-Charset", "UTF-8");
+        builder.setHeader("Accept-Encoding", "gzip");
+        builder.setHeader("Content-Encoding", "gzip");
+
+        if (handler != null) {
+            builder.execute(handler);
+        } else {
+            builder.execute();
+        }
+    }
+
     public static HttpResult httpPutLarge(String url, Map<String, String> headers, byte[] content) {
         try {
             HttpClientBuilder builder = HttpClients.custom();
@@ -301,6 +321,35 @@ public class HttpClient {
             httpPut.setEntity(new StringEntity(new String(content, "UTF-8"), ContentType.create("application/json", "UTF-8")));
 
             HttpResponse response = httpClient.execute(httpPut);
+            HttpEntity entity = response.getEntity();
+
+            HeaderElement[] headerElements = entity.getContentType().getElements();
+            String charset = headerElements[0].getParameterByName("charset").getValue();
+
+            return new HttpResult(response.getStatusLine().getStatusCode(),
+                IOUtils.toString(entity.getContent(), charset), Collections.<String, String>emptyMap());
+        } catch (Exception e) {
+            return new HttpResult(500, e.toString(), Collections.<String, String>emptyMap());
+        }
+    }
+
+    public static HttpResult httpGetLarge(String url, Map<String, String> headers, String content) {
+
+        try {
+            HttpClientBuilder builder = HttpClients.custom();
+            builder.setUserAgent(UtilsAndCommons.SERVER_VERSION);
+            builder.setConnectionTimeToLive(500, TimeUnit.MILLISECONDS);
+
+            CloseableHttpClient httpClient = builder.build();
+            HttpGetWithEntity httpGetWithEntity = new HttpGetWithEntity();
+            httpGetWithEntity.setURI(new URI(url));
+
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                httpGetWithEntity.setHeader(entry.getKey(), entry.getValue());
+            }
+
+            httpGetWithEntity.setEntity(new StringEntity(content, ContentType.create("application/json", "UTF-8")));
+            HttpResponse response = httpClient.execute(httpGetWithEntity);
             HttpEntity entity = response.getEntity();
 
             HeaderElement[] headerElements = entity.getContentType().getElements();
@@ -427,6 +476,15 @@ public class HttpClient {
         return sb.toString();
     }
 
+    public static Map<String, String> translateParameterMap(Map<String, String[]> parameterMap) {
+
+        Map<String, String> map = new HashMap<>(16);
+        for (String key : parameterMap.keySet()) {
+            map.put(key, parameterMap.get(key)[0]);
+        }
+        return map;
+    }
+
     public static class HttpResult {
         final public int code;
         final public String content;
@@ -440,6 +498,16 @@ public class HttpClient {
 
         public String getHeader(String name) {
             return respHeaders.get(name);
+        }
+    }
+
+    public static class HttpGetWithEntity extends HttpEntityEnclosingRequestBase {
+
+        public final static String METHOD_NAME = "GET";
+
+        @Override
+        public String getMethod() {
+            return METHOD_NAME;
         }
     }
 }

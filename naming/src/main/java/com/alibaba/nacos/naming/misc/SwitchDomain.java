@@ -28,11 +28,9 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class SwitchDomain implements Record, Cloneable {
 
-    private String name = UtilsAndCommons.SWITCH_DOMAIN_NAME;
-
     private List<String> masters;
 
-    private Map<String, Integer> adWeightMap = new HashMap<String, Integer>();
+    private Map<String, Integer> adWeightMap = new HashMap<>();
 
     private long defaultPushCacheMillis = TimeUnit.SECONDS.toMillis(10);
 
@@ -41,8 +39,6 @@ public class SwitchDomain implements Record, Cloneable {
     private long defaultCacheMillis = TimeUnit.SECONDS.toMillis(3);
 
     private float distroThreshold = 0.7F;
-
-    private String token = UtilsAndCommons.SUPER_TOKEN;
 
     private boolean healthCheckEnabled = true;
 
@@ -89,7 +85,7 @@ public class SwitchDomain implements Record, Cloneable {
 
     private String overriddenServerStatus = null;
 
-    private String serverMode = "AP";
+    private boolean defaultInstanceEphemeral = true;
 
     public boolean isEnableAuthentication() {
         return enableAuthentication;
@@ -342,12 +338,12 @@ public class SwitchDomain implements Record, Cloneable {
         this.overriddenServerStatus = overriddenServerStatus;
     }
 
-    public String getServerMode() {
-        return serverMode;
+    public boolean isDefaultInstanceEphemeral() {
+        return defaultInstanceEphemeral;
     }
 
-    public void setServerMode(String serverMode) {
-        this.serverMode = serverMode;
+    public void setDefaultInstanceEphemeral(boolean defaultInstanceEphemeral) {
+        this.defaultInstanceEphemeral = defaultInstanceEphemeral;
     }
 
     @Override

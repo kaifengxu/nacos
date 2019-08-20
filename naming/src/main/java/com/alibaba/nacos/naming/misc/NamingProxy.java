@@ -16,7 +16,6 @@
 package com.alibaba.nacos.naming.misc;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.nacos.core.utils.SystemUtils;
 import com.alibaba.nacos.naming.boot.RunningConfig;
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.Response;
@@ -39,7 +38,7 @@ public class NamingProxy {
 
     private static final String TIMESTAMP_SYNC_URL = "/distro/checksum";
 
-    public static void syncChecksums(Map<String, String> checksumMap, String server) {
+    public static void syncCheckSums(Map<String, String> checksumMap, String server) {
 
         try {
             Map<String, String> headers = new HashMap<>(128);
@@ -55,7 +54,7 @@ public class NamingProxy {
                     @Override
                     public Object onCompleted(Response response) throws Exception {
                         if (HttpURLConnection.HTTP_OK != response.getStatusCode()) {
-                            Loggers.EPHEMERAL.error("failed to req API: {}, code: {}, msg: {}",
+                            Loggers.DISTRO.error("failed to req API: {}, code: {}, msg: {}",
                                 "http://" + server + RunningConfig.getContextPath() +
                                     UtilsAndCommons.NACOS_NAMING_CONTEXT + TIMESTAMP_SYNC_URL,
                                 response.getStatusCode(), response.getResponseBody());
@@ -65,13 +64,13 @@ public class NamingProxy {
 
                     @Override
                     public void onThrowable(Throwable t) {
-                        Loggers.EPHEMERAL.error("failed to req API:" + "http://" + server
+                        Loggers.DISTRO.error("failed to req API:" + "http://" + server
                             + RunningConfig.getContextPath()
                             + UtilsAndCommons.NACOS_NAMING_CONTEXT + TIMESTAMP_SYNC_URL, t);
                     }
                 });
         } catch (Exception e) {
-            Loggers.EPHEMERAL.warn("NamingProxy", e);
+            Loggers.DISTRO.warn("NamingProxy", e);
         }
     }
 
@@ -79,8 +78,8 @@ public class NamingProxy {
 
         Map<String, String> params = new HashMap<>(8);
         params.put("keys", StringUtils.join(keys, ","));
-        HttpClient.HttpResult result = HttpClient.httpGet("http://" + server + RunningConfig.getContextPath()
-            + UtilsAndCommons.NACOS_NAMING_CONTEXT + DATA_GET_URL, new ArrayList<>(), params);
+        HttpClient.HttpResult result = HttpClient.httpGetLarge("http://" + server + RunningConfig.getContextPath()
+            + UtilsAndCommons.NACOS_NAMING_CONTEXT + DATA_GET_URL, new HashMap<>(8), JSON.toJSONString(params));
 
         if (HttpURLConnection.HTTP_OK == result.code) {
             return result.content.getBytes();

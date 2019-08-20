@@ -36,6 +36,7 @@ import static com.alibaba.nacos.core.utils.SystemUtils.NACOS_HOME;
 
 /**
  * @author nacos
+ * @author jifengnan
  */
 public class UtilsAndCommons {
 
@@ -69,7 +70,7 @@ public class UtilsAndCommons {
 
     public static final String NACOS_SERVER_HEADER = "Nacos-Server";
 
-    public static final String NACOS_VERSION = "1.0.0";
+    public static final String NACOS_VERSION = "1.0.1";
 
     public static final String SUPER_TOKEN = "xy";
 
@@ -116,6 +117,8 @@ public class UtilsAndCommons {
     public static final String UPDATE_INSTANCE_ACTION_REMOVE = "remove";
 
     public static final String DATA_BASE_DIR = NACOS_HOME + File.separator + "data" + File.separator + "naming";
+
+    public static final String NUMBER_PATTERN = "^\\d+$";
 
     public static final ScheduledExecutorService SERVICE_SYNCHRONIZATION_EXECUTOR;
 
@@ -237,4 +240,36 @@ public class UtilsAndCommons {
     public static String assembleFullServiceName(String namespaceId, String serviceName) {
         return namespaceId + UtilsAndCommons.NAMESPACE_SERVICE_CONNECTOR + serviceName;
     }
+
+    /**
+     * Provide a number between 0(inclusive) and {@code upperLimit}(exclusive) for the given {@code string},
+     * the number will be nearly uniform distribution.
+     * <p>
+     * <p>
+     *
+     * e.g. Assume there's an array which contains some IP of the servers provide the same service,
+     * the caller name can be used to choose the server to achieve load balance.
+     * <blockquote><pre>
+     *     String[] serverIps = new String[10];
+     *     int index = shakeUp("callerName", serverIps.length);
+     *     String targetServerIp = serverIps[index];
+     * </pre></blockquote>
+     *
+     * @param string     a string. the number 0 will be returned if it's null
+     * @param upperLimit the upper limit of the returned number, must be a positive integer, which means > 0
+     * @return a number between 0(inclusive) and upperLimit(exclusive)
+     * @throws IllegalArgumentException if the upper limit equals or less than 0
+     * @since 1.0.0
+     * @author jifengnan
+     */
+    public static int shakeUp(String string, int upperLimit) {
+        if (upperLimit < 1) {
+            throw new IllegalArgumentException("upper limit must be greater than 0");
+        }
+        if (string == null) {
+            return 0;
+        }
+        return (string.hashCode() & Integer.MAX_VALUE) % upperLimit;
+    }
+
 }

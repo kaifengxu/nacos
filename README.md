@@ -40,9 +40,9 @@ It is super easy to get started with your first project.
 
 You can download the package from the  [latest stable release](https://github.com/alibaba/nacos/releases).  
 
-Take release nacos-server-0.9.0.zip for example.
+Take release nacos-server-1.0.0.zip for example.
 ```
-unzip nacos-server-0.9.0.zip
+unzip nacos-server-1.0.0.zip
 cd nacos/bin 
 ``` 
 
@@ -97,9 +97,9 @@ Contributors are welcomed to join Nacos project. Please check [CONTRIBUTING](./C
      * users-nacos@googlegroups.com: Nacos usage general discussion.
      * dev-nacos@googlegroups.com: Nacos developer discussion (APIs, feature design, etc).
      * commits-nacos@googlegroups.com: Commits notice, very high frequency.
-* Join us from wechat. Welcome words: Nacos.
+* Join us from DingDing. 
 
-![cwex](http://acm-public.oss-cn-hangzhou.aliyuncs.com/xuc.png)
+![cwex](https://img.alicdn.com/tfs/TB1bpBlQmrqK1RjSZK9XXXyypXa-830-972.png_288x480q80.jpg)
 
 
 ## Who is using

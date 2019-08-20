@@ -56,6 +56,8 @@ public class NamingBase {
 
     public static final int TEST_PORT = 8080;
 
+    public static final int TIME_OUT = 3000;
+
     public static String randomDomainName() {
         StringBuilder sb = new StringBuilder();
         sb.append("jinhan");
@@ -165,25 +167,15 @@ public class NamingBase {
     }
 
     public static void prepareServer(int localPort) {
-        prepareServer(localPort, "UP", "AP");
+        prepareServer(localPort, "UP");
     }
 
-    public static void prepareServer(int localPort, String status, String mode) {
+    public static void prepareServer(int localPort, String status) {
         String url = "http://127.0.0.1:" + localPort + "/nacos/v1/ns/operator/switches?entry=overriddenServerStatus&value=" + status;
         List<String> headers = new ArrayList<String>();
         headers.add("User-Agent");
         headers.add("Nacos-Server");
         HttpClient.HttpResult result =
-            HttpClient.request(url, headers, new HashMap<String, String>(), "UTF-8", "PUT");
-
-        Assert.assertEquals(HttpStatus.SC_OK, result.code);
-
-
-        url = "http://127.0.0.1:" + localPort + "/nacos/v1/ns/operator/switches?entry=serverMode&value=" + mode;
-        headers = new ArrayList<String>();
-        headers.add("User-Agent");
-        headers.add("Nacos-Server");
-        result =
             HttpClient.request(url, headers, new HashMap<String, String>(), "UTF-8", "PUT");
 
         Assert.assertEquals(HttpStatus.SC_OK, result.code);
